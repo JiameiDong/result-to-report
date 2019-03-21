@@ -1,4 +1,4 @@
-'''import numpy as np
+﻿'''import numpy as np
 from numpy import *
 import pandas as pd
 import arch  # 条件异方差模型相关的库
@@ -12,7 +12,7 @@ import tensorflow as tf
 #from tensorflow.contrib.learn.python.learn.estimators.estimator import SKCompat
 #from sklearn.preprocessing import MinMaxScaler
 #from tensorflow.contrib.layers import fully_connected
-
+ 
 #set parameter
 TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
 lr = 0.0001          #learning rate，用于梯度下降
