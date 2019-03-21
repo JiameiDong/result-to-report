@@ -1,20 +1,20 @@
-import numpy as np
+﻿import numpy as np
 from numpy import *
 import pandas as pd
 import arch  # 条件异方差模型相关的库
 from arch.univariate import arch_model
 import pylab as mpl #导入中文字体，避免显示乱码
-from sklearn.metrics import mean_absolute_error,mean_squared_error
+from sklearn.metrics import mean_absolute_error,mean_squared_error 
 import matplotlib.pyplot as plt
 import tensorflow as tf
 #import tensorflow.contrib.rnn as rnn
 #from tensorflow.examples.tutorials.mnist import input_data
 #from tensorflow.contrib.learn.python.learn.estimators.estimator import SKCompat
 #from sklearn.preprocessing import MinMaxScaler
-#from tensorflow.contrib.layers import fully_connected
+#from tensorflow.contrib.layers import fully_connected 
 
 #set parameter
-TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
+TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps 
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
 n_steps = 126          # time steps
