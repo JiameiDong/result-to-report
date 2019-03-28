@@ -17,7 +17,7 @@ import tensorflow as tf
 TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps 
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
-n_steps = 126          # time steps
+n_steps = 66          # time steps
 u1 = 10                #第一个 LSTM的hidden unit 
 u2 = 4                 #第二个 LSTM的hidden unit 
 u3 = 2                 #第三个 LSTM的hidden unit 
@@ -28,7 +28,7 @@ youhuaqi = 3         #优化器：1：mse,2:mae,3:hmse,4:hmae
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
-data = pd.read_csv("./SSEdaily.csv",
+data = pd.read_csv("./CSI300daily.csv",
                     sep=',',
                     encoding = "utf-8",
                     parse_dates=['TDATE'],
@@ -72,14 +72,15 @@ for j in range(len(ret)-pt):
     am = arch_model(t,
                   mean = 'Constant',
                   vol = 'Garch', 
-                  p = 1, o = 0, q = 1,
-                  dist = 'Normal')  ##Garch(1,1)
+                  p = 1, o = 1, q = 1,
+                  dist = 'Normal')  ##GJRGarch(1,1)
     res1 = am.fit()
 
     #Garch(1,1) 的参数
-    omega = np.append(omega,res1.params.omega)
+    omega = np.append(omega,res1.params[1])
     alpha = np.append(alpha,res1.params[2])
-    beta  = np.append(beta,res1.params[3])
+    gamma = np.append(beta,res1.params[3]) 
+    beta  = np.append(beta,res1.params[4])
 
 '''部分结果
     print(res1.params)
@@ -101,10 +102,12 @@ for j in range(len(ret)-pt):
 rawdata = pd.DataFrame({'log_return':ret[n_steps:],
                     'omega':omega,
                     'alpha':alpha,
+                    'gamma':gamma,
                     'beta':beta,
                     'vol':RV[n_steps:]},
                     index = table.index[n_steps:]
                     )
+
 '''部分结果
     print(rawdata)
             log_return         omega         alpha          beta        vol
