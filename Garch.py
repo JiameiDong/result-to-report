@@ -185,8 +185,8 @@ for j in range(n_steps):
 
     model = arch_model(     t,
                             mean = 'Constant',
-                            vol = 'EGARCH', 
-                            p = 1, o = 0, q = 1,
+                            vol = 'GARCH', 
+                            p = 1, o = 1, q = 1,
                             dist = 'Normal')  ##Garch(1,1)
 
     model_fit = model.fit()
