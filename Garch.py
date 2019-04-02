@@ -86,7 +86,7 @@ for j in range(n_steps):
     model = arch_model(     t,
                             mean = 'Constant',
                             vol = 'GARCH', 
-                            p = 1, o = 1, q = 1,
+                            p = 1, o = 0, q = 1,
                             dist = 'Normal')  ##Garch(1,1)
 
     model_fit = model.fit()
@@ -122,4 +122,4 @@ yhat1=pd.DataFrame({
 plt.plot(test_vol,label='actual volitility')
 plt.plot(yhat1,label='predict')
 plt.legend(['actual volitility','predict'])
-plt.show()'''
+plt.show()
