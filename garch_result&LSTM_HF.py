@@ -14,7 +14,7 @@ import tensorflow as tf
 #from tensorflow.contrib.layers import fully_connected 
 
 #set parameter
-TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps 
+TEST_EXAMPLES=264*17    #测试集个数： TEST_EXAMPLES + n_steps 
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
 n_steps = 66          # time steps
