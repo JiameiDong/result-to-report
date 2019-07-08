@@ -28,7 +28,7 @@ print(pt)
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
-data = pd.read_csv("D:/RA/result for teacher/CSI300daily.csv",
+data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     sep=',',
                     encoding = "utf-8",
                     parse_dates=['TDATE'],
