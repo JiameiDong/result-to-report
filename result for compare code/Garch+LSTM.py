@@ -23,12 +23,12 @@ u2 = 4                 #第二个 LSTM的hidden unit
 u3 = 2                 #第三个 LSTM的hidden unit 
 batch_size = 1         #每一个batch的长度
 pt = 126               #Garch 模型 与 volatility 的 rolling 长度
-youhuaqi = 3         #优化器：1：mse,2:mae,3:hmse,4:hmae
+youhuaqi = 2         #优化器：1：mse,2:mae,3:hmse,4:hmae
 print(pt)
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
-data = pd.read_csv("D:/RA/result for teacher/CSI300daily.csv",
+data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     sep=',',
                     encoding = "utf-8",
                     parse_dates=['TDATE'],
@@ -63,7 +63,7 @@ for j in range(len(price)-pt):
     model = arch_model(     t,
                             mean = 'Constant',
                             vol = 'GARCH', 
-                            p = 1, o = 0, q = 1,
+                            p = 1, o = 1, q = 1,
                             dist = 'Normal')  ##Garch(1,1)
 
     model_fit = model.fit()
@@ -92,7 +92,7 @@ print ('hmae:',hmae,'   hmse:',hmse)
 #_____________________________add LSTM____________________
 #整合数据
 rawdata = pd.DataFrame({
-                    'log_return':table['ret'][pt:],
+                  #  'log_return':table['ret'][pt:],
                     'predict':table['vol_pre'][pt:],
                     'vol':table['vol'][pt:]},
                     index=table.index[pt:]
@@ -284,7 +284,8 @@ hmse=  mean_squared_error(one,ratio)
 hmae = mean_absolute_error(y_pred=one,y_true=ratio)   
 print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
-
+print('LSTM')
+print('youhuaqi:',youhuaqi)
 
 plt.figure(figsize = (18,9))
 plt.plot(rawdata.index[-TEST_EXAMPLES-len(real_train_y):-TEST_EXAMPLES],real_train_y,color='g',label='True')
