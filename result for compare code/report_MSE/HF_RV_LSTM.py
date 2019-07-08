@@ -7,60 +7,14 @@ import pylab as mpl #导入中文字体，避免显示乱码
 from sklearn.metrics import mean_absolute_error,mean_squared_error
 import matplotlib.pyplot as plt
 import tensorflow as tf
-
-##---------------------get HF data-----------------------------------------
-test_number=264*17
-pt_HF = 126*17               #Garch 模型 与 volatility 的 rolling 长度
-dateparse_HF = lambda dates:pd.datetime.strptime(dates,'%Y%m%d %H%M')  #读取日期格式
-
-data = pd.read_csv("D:/RA/result for teacher/SSE_15min.csv",
-                    sep=',',
-                    encoding = "utf-8",
-                    parse_dates={'datetime':['TDATE1','MINTIME']},
-                    date_parser=dateparse_HF)    #读取数据
-table = pd.pivot_table(data,index=['datetime'],values=['ENDPRC'])  #日期、价格放同一个表中
-
-
-
-end_price_HF = pd.pivot_table(data,index=['datetime'],values=['ENDPRC'])  #日期、价格放同一个表中
-
-##get HF return
-price = end_price_HF.ENDPRC.tolist()   #价格 转换格式
-
-ret = np.zeros((len(price)))    #log return 初始定义
-
-ret_mean = np.zeros((len(price))) #mean of log return 初始定义
-
-sum_ret_vol = np.zeros((len(price))) # sum of distance of mean of log return 初始定义
-
-ret_vol = np.zeros((len(price)))     #distance of mean of log return 初始定义
-
-RV = np.zeros((len(price)))          #volatility 初始定义
-
-#计算volatility
-for i in range(1,len(price)):
-        ret[i] = (math.log(price[i])-math.log(price[i-1])) * 100
-table['ret']=ret
-table['vol']=table['ret'].rolling(pt_HF).std()
-
-
-
-vol_HF = np.array(table['vol'])
-
-reshape_vol_HF = vol_HF.reshape(-1,17)
-
-input_vol_HF = pd.DataFrame(data=reshape_vol_HF)
-print(input_vol_HF)
-print(input_vol_HF[126:])
-print('test')
-print(input_vol_HF[1][126:])
-# 1485 rows x 17 columns
-# input_vol_HF is the input form of input of LSTM
-
-##----------------------get daily data---------------------------
+#import tensorflow.contrib.rnn as rnn
+#from tensorflow.examples.tutorials.mnist import input_data
+#from tensorflow.contrib.learn.python.learn.estimators.estimator import SKCompat
+#from sklearn.preprocessing import MinMaxScaler
+#from tensorflow.contrib.layers import fully_connected
 
 #set parameter
-TEST_EXAMPLES=264    #daily测试集个数： TEST_EXAMPLES + n_steps
+TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
 n_steps = 126         # time steps
@@ -70,7 +24,7 @@ u3 = 2                 #第三个 LSTM的hidden unit
 batch_size = 1         #每一个batch的长度
 pt = 126               #Garch 模型 与 volatility 的 rolling 长度
 youhuaqi = 4         #优化器：1：mse,2:mae,3:hmse,4:hmae
-print(pt)
+
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
@@ -81,6 +35,25 @@ data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     date_parser=dateparse)    #读取数据
 
 table = pd.pivot_table(data,index=['TDATE'],values=['ENDPRC'])  #日期、价格放同一个表中
+
+
+data1 = pd.read_csv("D:/RA/result for teacher/SSE_HF_RR_forcs_vol_all.csv",
+                    sep=',',
+                    encoding = "ASCII")    #读取数据
+data1 = data1['fit2forecast'].tolist()
+
+real_tail = pd.DataFrame({'ENDPRC':table['ENDPRC'][-TEST_EXAMPLES:],
+                          'RR_forecs': data1[-TEST_EXAMPLES:]},
+                        index=table.index[-TEST_EXAMPLES:])
+
+'''
+print(real_tail)
+              ENDPRC  RR_forecs
+TDATE
+2017-09-01  3367.119   0.668256
+2017-09-04  3379.583   0.660752
+2017-09-05  3384.317   0.631868
+'''
 
 ##get daily return
 price = table.ENDPRC.tolist()   #价格 转换格式
@@ -95,14 +68,14 @@ ret_vol = np.zeros((len(price)))     #distance of mean of log return 初始定�
 
 RV = np.zeros((len(price)))          #volatility 初始定义
 
-
-
 #计算volatility
 for i in range(1,len(price)):
         ret[i] = (math.log(price[i])-math.log(price[i-1])) * 100
 table['ret']=ret
 table['vol']=table['ret'].rolling(pt).std()
-print(table)
+
+print(len(ret))
+print(len(ret[pt:]))
 
 yhat1=[0]*pt
 for j in range(len(price)-pt):
@@ -121,32 +94,29 @@ for j in range(len(price)-pt):
 table['vol_pre']=yhat1
 print(table)
 
+yhat1 = table['vol'][-TEST_EXAMPLES:]
+test_vol = real_tail['RR_forecs'][-TEST_EXAMPLES:]
 
+mse = mean_squared_error(yhat1,test_vol)        
+mae = mean_absolute_error(y_pred=yhat1,y_true=test_vol)    
+one = np.ones(shape=(len(yhat1), 1))
+ratio = yhat1 / test_vol
+hmse=  mean_squared_error(one,ratio)     
+hmae = mean_absolute_error(y_pred=one,y_true=ratio)   
+
+print ('mae:',mae,'   mse:',mse)
+print ('hmae:',hmae,'   hmse:',hmse)
+
+
+#_____________________________add LSTM____________________
 #整合数据
 rawdata = pd.DataFrame({
                     'log_return':table['ret'][pt:],
-                    'predict':table['vol_pre'][pt:],
-                    'vol':table['vol'][pt:],
-                    'vol_HF930':input_vol_HF[0][pt:].tolist(),
-                    'vol_HF945':input_vol_HF[1][pt:].tolist(),
-                    'vol_HF1000':input_vol_HF[2][pt:].tolist(),
-                    'vol_HF1015':input_vol_HF[3][pt:].tolist(),
-                    'vol_HF1030':input_vol_HF[4][pt:].tolist(),
-                    'vol_HF1045':input_vol_HF[5][pt:].tolist(),
-                    'vol_HF1100':input_vol_HF[6][pt:].tolist(),
-                    'vol_HF1115':input_vol_HF[7][pt:].tolist(),
-                    'vol_HF1130':input_vol_HF[8][pt:].tolist(),
-                    'vol_HF1315':input_vol_HF[9][pt:].tolist(),
-                    'vol_HF1330':input_vol_HF[10][pt:].tolist(),
-                    'vol_HF1345':input_vol_HF[11][pt:].tolist(),
-                    'vol_HF1400':input_vol_HF[12][pt:].tolist(),
-                    'vol_HF1415':input_vol_HF[13][pt:].tolist(),
-                    'vol_HF1430':input_vol_HF[14][pt:].tolist(),
-                    'vol_HF1445':input_vol_HF[15][pt:].tolist(),
-                    'vol_HF1500':input_vol_HF[16][pt:].tolist()
-                    },
+                    'predict':data1,
+                    'vol':table['vol'][pt:]},
                     index=table.index[pt:]
                     )
+
 
 #只取数据，去标题和日期，进行计算
 values = rawdata.values
@@ -322,6 +292,9 @@ hmse=  mean_squared_error(one,ratio)
 hmae = mean_absolute_error(y_pred=one,y_true=ratio)   
 print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
+print('youhuaqi',youhuaqi)
+print('SSE_HF_RR')
+
 
 
 plt.figure(figsize = (18,9))

@@ -17,14 +17,14 @@ import tensorflow as tf
 TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
-n_steps =126       # time steps
+n_steps = 126         # time steps
 u1 = 10                #第一个 LSTM的hidden unit 
 u2 = 4                 #第二个 LSTM的hidden unit 
 u3 = 2                 #第三个 LSTM的hidden unit 
 batch_size = 1         #每一个batch的长度
 pt = 126               #Garch 模型 与 volatility 的 rolling 长度
-youhuaqi = 4         #优化器：1：mse,2:mae,3:hmse,4:hmae
-print(pt)
+youhuaqi = 3         #优化器：1：mse,2:mae,3:hmse,4:hmae
+
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
@@ -35,6 +35,25 @@ data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     date_parser=dateparse)    #读取数据
 
 table = pd.pivot_table(data,index=['TDATE'],values=['ENDPRC'])  #日期、价格放同一个表中
+
+
+data1 = pd.read_csv("D:/RA/result for teacher/SSE_HF_RV_forcs_vol_all_test.csv",
+                    sep=',',
+                    encoding = "ASCII")    #读取数据
+data1 = data1['fit2forecast'].tolist()
+
+real_tail = pd.DataFrame({'ENDPRC':table['ENDPRC'][-TEST_EXAMPLES:],
+                          'RR_forecs': data1[-TEST_EXAMPLES:]},
+                        index=table.index[-TEST_EXAMPLES:])
+
+'''
+print(real_tail)
+              ENDPRC  RR_forecs
+TDATE
+2017-09-01  3367.119   0.668256
+2017-09-04  3379.583   0.660752
+2017-09-05  3384.317   0.631868
+'''
 
 ##get daily return
 price = table.ENDPRC.tolist()   #价格 转换格式
@@ -54,15 +73,15 @@ for i in range(1,len(price)):
         ret[i] = (math.log(price[i])-math.log(price[i-1])) * 100
 table['ret']=ret
 table['vol']=table['ret'].rolling(pt).std()
-print(table)
 
-'''yhat1=[0]*pt
+
+yhat1=[0]*pt
 for j in range(len(price)-pt):
     t = ret[(j):(pt+j)]
 
     model = arch_model(     t,
                             mean = 'Constant',
-                            vol = 'EGARCH', 
+                            vol = 'GARCH', 
                             p = 1, o = 0, q = 1,
                             dist = 'Normal')  ##Garch(1,1)
 
@@ -70,32 +89,12 @@ for j in range(len(price)-pt):
     yhat = model_fit.forecast(horizon=1)
     yhat1 =np.append(yhat1, np.sqrt(yhat.variance.values[-1,:]))
 
-present = pd.DataFrame({'vol':table['vol'][pt:],
-                        'vol_pre':yhat1[pt:]
-                        },
-                        index= table.index[pt:])
+table['vol_pre']=yhat1
+print(table)
 
-present = present[present.vol_pre<7]
-present = present[present.vol_pre>0]
-'''
-present = pd.DataFrame({'vol':table['vol']
-                        },
-                        index= table.index)
-#present.ewm(span=pt).mean().plot(style='k')
-table['yhat1']=present.ewm(span=pt).mean()
+yhat1 = table['vol'][-TEST_EXAMPLES:]
+test_vol = real_tail['RR_forecs'][-TEST_EXAMPLES:]
 
-#plt.plot(present['vol'],label='actual volitility')
-#plt.plot(present['vol_pre'][-TEST_EXAMPLES:],'r.',label='predict')
-
-present= pd.DataFrame({'yhat1':table['yhat1'][-TEST_EXAMPLES:],
-                        'test_vol': table['vol'][-TEST_EXAMPLES:]},
-                        index=table.index[-TEST_EXAMPLES:])
-present =present[present.yhat1>0]
-
-yhat1 = present['yhat1']
-test_vol = present['test_vol']
-print(yhat1)
-print(test_vol)
 mse = mean_squared_error(yhat1,test_vol)        
 mae = mean_absolute_error(y_pred=yhat1,y_true=test_vol)    
 one = np.ones(shape=(len(yhat1), 1))
@@ -105,7 +104,19 @@ hmae = mean_absolute_error(y_pred=one,y_true=ratio)
 
 print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
-plt.plot(table['vol'][pt:],label='actual volitility')
-plt.plot(present['test_vol'],'r.',label='predict')
 
+
+
+vol = pd.DataFrame({
+                    'vol':table['vol'][pt:]},
+                    index=table.index[pt:]
+                    )
+vol_pre=pd.DataFrame({
+                    'vol':real_tail['RR_forecs'][-TEST_EXAMPLES:]},
+                    index=table.index[-TEST_EXAMPLES:]
+                    )
+#print("yhat",yhat1)
+plt.plot(vol,label='actual volitility')
+plt.plot(vol_pre,label='predict')
+plt.legend(['actual volitility','predict'])
 plt.show()
