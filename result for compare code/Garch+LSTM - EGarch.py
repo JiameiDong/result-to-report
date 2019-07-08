@@ -17,18 +17,18 @@ import tensorflow as tf
 TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
-n_steps =252       # time steps
+n_steps =126       # time steps
 u1 = 10                #第一个 LSTM的hidden unit 
 u2 = 4                 #第二个 LSTM的hidden unit 
 u3 = 2                 #第三个 LSTM的hidden unit 
 batch_size = 1         #每一个batch的长度
-pt = 252               #Garch 模型 与 volatility 的 rolling 长度
-youhuaqi = 2         #优化器：1：mse,2:mae,3:hmse,4:hmae
+pt = 126               #Garch 模型 与 volatility 的 rolling 长度
+youhuaqi = 1         #优化器：1：mse,2:mae,3:hmse,4:hmae
 print(pt)
 #get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
-data = pd.read_csv("D:/RA/result for teacher/CSI300daily.csv",
+data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     sep=',',
                     encoding = "utf-8",
                     parse_dates=['TDATE'],
@@ -83,7 +83,7 @@ rawdata = pd.DataFrame({
 rawdata = rawdata[rawdata.predict<7]
 rawdata = rawdata[rawdata.predict>0]
 
-rawdata.to_csv('CSI300daily_testqqqqqqqqqqqqqq.csv', index=True, header=True )  #保存初始LSTM 的 input数据
+#rawdata.to_csv('CSI300daily_testqqqqqqqqqqqqqq.csv', index=True, header=True )  #保存初始LSTM 的 input数据
 
 '''rawdata = pd.read_csv("./CSI300daily_testqqqqqqqqqqqqqq.csv",
                     sep=',',
@@ -267,7 +267,7 @@ hmse=  mean_squared_error(one,ratio)
 hmae = mean_absolute_error(y_pred=one,y_true=ratio)   
 print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
-
+print("SSE",youhuaqi)
 
 plt.figure(figsize = (18,9))
 plt.plot(rawdata.index[-TEST_EXAMPLES-len(real_train_y):-TEST_EXAMPLES],real_train_y,color='g',label='True')
