@@ -17,126 +17,85 @@ import tensorflow as tf
 TEST_EXAMPLES=264    #测试集个数： TEST_EXAMPLES + n_steps
 lr = 0.0001          #learning rate，用于梯度下降
 training_iters = 150    #训练的循环次数
-n_steps =126          # time steps
+n_steps = 126         # time steps
 u1 = 10                #第一个 LSTM的hidden unit 
 u2 = 4                 #第二个 LSTM的hidden unit 
 u3 = 2                 #第三个 LSTM的hidden unit 
 batch_size = 1         #每一个batch的长度
 pt = 126               #Garch 模型 与 volatility 的 rolling 长度
-youhuaqi = 1         #优化器：1：mse,2:mae,3:hmse,4:hmae
-print(pt)
-#get HF data
-dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d %H%M')  #读取日期格式
-data_HF = pd.read_csv("D:/RA/result for teacher\SSE_15min.csv",
-                    sep=',',
-                    encoding = "utf-8",
-                    parse_dates={'datetime':['TDATE1','MINTIME']},
-                    date_parser=dateparse)    #读取数据
+youhuaqi = 4         #优化器：1：mse,2:mae,3:hmse,4:hmae
 
-table_HF = pd.pivot_table(data_HF,index=['datetime'],values=['ENDPRC','HIGHPRC','LOWPRC'])  #日期、价格放同一个表中
-
-##get daily return
-price_HF = table_HF.ENDPRC.tolist()   #价格 转换格式
-high_price_HF = table_HF.HIGHPRC.tolist()  
-low_price_HF = table_HF.LOWPRC.tolist()  
-ret_HF = np.zeros((len(price_HF)))    #log return 初始定义
-RV_HF = np.zeros((len(price_HF)))   
-
-#计算volatility
-for i in range(1,len(price_HF)):
-        ret_HF[i] = (math.log(price_HF[i])-math.log(price_HF[i-1])) * 100
-        RV_HF[i] =  ( (math.log(high_price_HF[i])-math.log(low_price_HF[i])) **2 )
-table_HF['ret_HF']=ret_HF
-table_HF['r2'] = RV_HF
-
-
-
-#get daily data
+#get data
 dateparse = lambda dates:pd.datetime.strptime(dates,'%Y%m%d')  #读取日期格式
 
-data_daily = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
+data = pd.read_csv("D:/RA/result for teacher/SSE_daily.csv",
                     sep=',',
                     encoding = "utf-8",
                     parse_dates=['TDATE'],
                     date_parser=dateparse)    #读取数据
 
-table_daily = pd.pivot_table(data_daily,index=['TDATE'],values=['ENDPRC','HIGHPRC','LOWPRC'])  #日期、价格放同一个表中
+table = pd.pivot_table(data,index=['TDATE'],values=['ENDPRC'])  #日期、价格放同一个表中
+
+
+data1 = pd.read_csv("D:/RA/result for teacher/SSE_HF_RV_forcs_vol_all.csv",
+                    sep=',',
+                    encoding = "ASCII")    #读取数据
+data1 = data1['fit2forecast'].tolist()
+
+real_tail = pd.DataFrame({'ENDPRC':table['ENDPRC'][-TEST_EXAMPLES:],
+                          'RR_forecs': data1[-TEST_EXAMPLES:]},
+                        index=table.index[-TEST_EXAMPLES:])
+
+'''
+print(real_tail)
+              ENDPRC  RR_forecs
+TDATE
+2017-09-01  3367.119   0.668256
+2017-09-04  3379.583   0.660752
+2017-09-05  3384.317   0.631868
+'''
 
 ##get daily return
-price_daily = table_daily.ENDPRC.tolist()   #价格 转换格式
-high_price_daily = table_daily.HIGHPRC.tolist()  
-low_price_daily = table_daily.LOWPRC.tolist() 
-ret_daily = np.zeros((len(price_daily)))    #log return 初始定义
+price = table.ENDPRC.tolist()   #价格 转换格式
 
-#计算daily return
-for i in range(1,len(price_daily)):
-        ret_daily[i] = 100 * (math.log(high_price_daily[i])-math.log(low_price_daily[i])) 
-table_daily['ret_daily']=ret_daily
-table_daily['vol']=table_daily['ret_daily'].rolling(pt).std()
+ret = np.zeros((len(price)))    #log return 初始定义
 
-print('table_daily',table_daily)
+ret_mean = np.zeros((len(price))) #mean of log return 初始定义
 
-'''
-table_HF                        
-datetime             ENDPRC    ret_HF        r2
-2012-09-03 09:30:00  2044.825  0.000000  0.000000e+00
-2012-09-03 09:45:00  2048.270  0.168332  2.833577e-02
+sum_ret_vol = np.zeros((len(price))) # sum of distance of mean of log return 初始定义
 
+ret_vol = np.zeros((len(price)))     #distance of mean of log return 初始定义
 
-table_daily               
-TDATE         ENDPRC  ret_daily
-2012-09-03  2059.147   0.000000
-2012-09-04  2043.649  -0.755488
-2012-09-05  2037.681  -0.292454'''
+RV = np.zeros((len(price)))          #volatility 初始定义
 
+#计算volatility
+for i in range(1,len(price)):
+        ret[i] = (math.log(price[i])-math.log(price[i-1])) * 100
+table['ret']=ret
+table['vol']=table['ret'].rolling(pt).std()
 
-'''
-HF 每17天，计算一个RV
-daily ret 计算vol
-对比mse,mae,etc
-'''
-#计算RV,一天17个数
-
-
-r2= table_HF['r2'].tolist()
-r2 = np.reshape(r2,newshape=[-1,17])
-rv = r2.sum(axis=1)
-rv = 0.25 * math.log(2) * rv
-print('RV',rv)
-print(len(rv))
-
-RV  = pd.DataFrame({
-                    'RV':rv[pt:],
-                    },
-                    index=table_daily.index[pt:]
-                    )        
-
-print(RV)    #1353行
-
-
-#计算Garch
+print(len(ret))
+print(len(ret[pt:]))
 
 yhat1=[0]*pt
-for j in range(len(price_daily)-pt):
-    t = ret_daily[(j):(pt+j)]
+for j in range(len(price)-pt):
+    t = ret[(j):(pt+j)]
 
     model = arch_model(     t,
                             mean = 'Constant',
                             vol = 'GARCH', 
-                            p = 1, o = 1, q = 1,
+                            p = 1, o = 0, q = 1,
                             dist = 'Normal')  ##Garch(1,1)
 
     model_fit = model.fit()
     yhat = model_fit.forecast(horizon=1)
     yhat1 =np.append(yhat1, np.sqrt(yhat.variance.values[-1,:]))
 
-RV['vol_pre']=yhat1[pt:]
-#RV['vol_pre']=table_daily['vol'][pt:]
-print(RV)
+table['vol_pre']=yhat1
+print(table)
 
-
-yhat1 = RV['RV'][-TEST_EXAMPLES:]
-test_vol = RV['vol_pre'][-TEST_EXAMPLES:]
+yhat1 = table['vol'][-TEST_EXAMPLES:]
+test_vol = real_tail['RR_forecs'][-TEST_EXAMPLES:]
 
 mse = mean_squared_error(yhat1,test_vol)        
 mae = mean_absolute_error(y_pred=yhat1,y_true=test_vol)    
@@ -149,30 +108,16 @@ print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
 
 
-
-
-
 #_____________________________add LSTM____________________
 #整合数据
 rawdata = pd.DataFrame({
-                    'log_return':table_daily['ret_daily'][pt:],
-                    'predict':RV['vol_pre'],
-                    'vol':RV['RV']},
-                    index=table_daily.index[pt:]
+                    'log_return':table['ret'][pt:],
+                    'predict':data1,
+                    'vol':table['vol'][pt:]},
+                    index=table.index[pt:]
                     )
 
 
-
-rawdata.to_csv('CSI300daily_testqqqqqqqqqqqqqq.csv', index=True, header=True )  #保存初始LSTM 的 input数据
-
-'''rawdata = pd.read_csv("./CSI300daily_testqqqqqqqqqqqqqq.csv",
-                    sep=',',
-                    encoding = "utf-8",
-                    parse_dates=['TDATE'],
-                    date_parser=dateparse)    #读取数据
-
-input_data= pd.pivot_table(rawdata,index=['TDATE'],values=['log_return','omega','alpha','beta','vol'])  #日期、价格放同一个表中
-'''
 #只取数据，去标题和日期，进行计算
 values = rawdata.values
 n_inputs = len(rawdata.columns)  #计算列数
@@ -347,8 +292,10 @@ hmse=  mean_squared_error(one,ratio)
 hmae = mean_absolute_error(y_pred=one,y_true=ratio)   
 print ('mae:',mae,'   mse:',mse)
 print ('hmae:',hmae,'   hmse:',hmse)
-print('Garch(1,1)')
-print('youhuaqi:',youhuaqi)
+print('youhuaqi',youhuaqi)
+print('SSE_HF_RR')
+
+
 
 plt.figure(figsize = (18,9))
 plt.plot(rawdata.index[-TEST_EXAMPLES-len(real_train_y):-TEST_EXAMPLES],real_train_y,color='g',label='True')
@@ -368,7 +315,7 @@ plt.ylabel('Vol')
 plt.legend(fontsize=18)
 plt.show()
 
-plt.plot(price_daily)
+plt.plot(price)
 plt.xlabel('Date')
 plt.ylabel('price')
 plt.legend(fontsize=18)
