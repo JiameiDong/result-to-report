@@ -1,0 +1,13 @@
+
+
+file_data = read.csv("D:/RA/result for teacher/result for compare code/backtest/combine_file/SSE_LSTM_youhuaqi_2_0.06394788566182003.csv", header=T,sep = ",")
+file_data = file_data[2]
+Forecast = file_data$write_data[(length(file_data$write_data)-264):length(file_data$write_data)]
+InSampleData = file_data$write_data[0:(length(file_data$write_data)-264*2)]
+OutSampleData= file_data$write_data[(length(file_data$write_data)-264*2):(length(file_data$write_data)-264)]
+
+VaR = quantile(Forecast, alpha)
+
+BackTest = BacktestVaR ( OutSampleData , VaR, alpha=0.01)
+BackTest
+
